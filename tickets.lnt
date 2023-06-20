@@ -1,0 +1,26 @@
+module tickets is
+
+	process TicketMachine[cancel: any] is
+		hide t20min, t1h, KupBilet: any in
+			loop
+				select
+					KupBilet;
+					BuyTicket[t20min, t1h, cancel]
+					[]
+					cancel
+				end select
+			end loop
+		end hide
+	end process
+
+	process BuyTicket[t20min, t1h, cancel: any] is
+			select
+				t20min
+				[]
+				t1h
+				[]
+				cancel
+			end select
+	end process
+
+end module
