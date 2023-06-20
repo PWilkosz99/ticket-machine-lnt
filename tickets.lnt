@@ -1,5 +1,9 @@
 module tickets is
 
+type TicketTypes is
+	t20min, t1h, t24h, t1msc
+end type
+
 	process TicketMachine[cancel: any] is
 		hide t20min, t1h, KupBilet: any in
 			loop
@@ -14,13 +18,38 @@ module tickets is
 	end process
 
 	process BuyTicket[t20min, t1h, cancel: any] is
+		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any in
 			select
-				t20min
+				tBilet20minutowy;
+				BuyTicketProcess[cancel](t20min)
 				[]
-				t1h
+				tBiletGodzinny;
+				BuyTicketProcess[cancel](t1h)
+				[]
+				tbiletDobowy;
+				BuyTicketProcess[cancel](t24h)
+				[]
+				tBiletMiesieczny;
+				BuyTicketProcess[cancel](t1msc)
 				[]
 				cancel
 			end select
+		end hide
+	end process
+
+	process BuyTicketProcess[cancel: any](in ticketType: TicketTypes) is
+		hide cokolwiekdla20min, cokolwiekdla1h, cokolwiekdla24h, cokolwiekdla1msc : any in
+			select
+				case ticketType in
+					t20min ->  cokolwiekdla20min
+					| t1h -> cokolwiekdla1h
+					| t24h ->  cokolwiekdla24h
+					| t1msc -> cokolwiekdla1msc
+				end case
+				[]
+				cancel
+			end select
+		end hide
 	end process
 
 end module
