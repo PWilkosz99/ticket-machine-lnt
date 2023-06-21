@@ -8,7 +8,7 @@ channel bucket is
 	(cost:int)
 end channel
 
-	process TicketMachine[print : any, cancel: any] is
+	process TicketMachine[print, cancel: any] is
 		hide KupBilet: any in
 			loop
 				select
@@ -21,34 +21,86 @@ end channel
 		end hide
 	end process
 
-	process BuyTicket[print : any, cancel: any] is
-		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any, setCost : bucket in
+	process BuyTicket[print, cancel: any] is
+		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any, bucketChannel : bucket in
 			select
 				tBilet20minutowy;
-				BuyTicketProcess[print, setCost, cancel](t20min)
+				BuyTicketProcess[print, cancel, bucketChannel](t20min)
 				[]
 				tBiletGodzinny;
-				BuyTicketProcess[print, setCost, cancel](t1h)
+				BuyTicketProcess[print, cancel, bucketChannel](t1h)
 				[]
 				tbiletDobowy;
-				BuyTicketProcess[print, setCost, cancel](t24h)
+				BuyTicketProcess[print, cancel, bucketChannel](t24h)
 				[]
 				tBiletMiesieczny;
-				BuyTicketProcess[print, setCost, cancel](t1msc)
+				BuyTicketProcess[print, cancel, bucketChannel](t1msc)
 				[]
 				cancel
 			end select
 		end hide
 	end process
 
-	process BuyTicketProcess[print : any, setCost : bucket, cancel: any](in ticketType: TicketTypes) is
-		hide cokolwiekdla20min, cokolwiekdla1h, cokolwiekdla24h, cokolwiekdla1msc : any in
+	process BuyTicketProcess[print, cancel: any, bucketChannel : bucket] (in ticketType: TicketTypes) is
+		hide ulgowy, zwykly, grupowy : any in
 			select
 				case ticketType in
-					t20min ->  cokolwiekdla20min; BuyTicketSetter[print, setCost](4)
-					| t1h -> cokolwiekdla1h; BuyTicketSetter[print, setCost](8)
-					| t24h ->  cokolwiekdla24h; BuyTicketSetter[print, setCost](20)
-					| t1msc -> cokolwiekdla1msc; BuyTicketSetter[print, setCost](120)
+					t20min ->  
+						select 
+							ulgowy; 
+							Printer[print]("Cena biletu:" & "2"); 
+							TicketPriceSetter[print, cancel, bucketChannel](2)
+							[]
+							zwykly; 
+							Printer[print]("Cena biletu:" & "4"); 
+							TicketPriceSetter[print, cancel, bucketChannel](4)
+							[]
+							grupowy; 
+							Printer[print]("Cena biletu:" & "3"); 
+							TicketPriceSetter[print, cancel, bucketChannel](3)
+						end select
+					| t1h ->  
+						select 
+							ulgowy; 
+							Printer[print]("Cena biletu:" & "3"); 
+							TicketPriceSetter[print, cancel, bucketChannel](3)
+							[]
+							zwykly; 
+							Printer[print]("Cena biletu:" & "6"); 
+							TicketPriceSetter[print, cancel, bucketChannel](6)
+							[]
+							grupowy; 
+							Printer[print]("Cena biletu:" & "4"); 
+							TicketPriceSetter[print, cancel, bucketChannel](4)
+						end select
+					| t24h ->  
+						select 
+							ulgowy; 
+							Printer[print]("Cena biletu:" & "8"); 
+							TicketPriceSetter[print, cancel, bucketChannel](8)
+							[]
+							zwykly; 
+							Printer[print]("Cena biletu:" & "16"); 
+							TicketPriceSetter[print, cancel, bucketChannel](16)
+							[]
+							grupowy; 
+							Printer[print]("Cena biletu:" & "10"); 
+							TicketPriceSetter[print, cancel, bucketChannel](10)
+						end select
+					| t1msc ->  
+						select 
+							ulgowy; 
+							Printer[print]("Cena biletu:" & "27"); 
+							TicketPriceSetter[print, cancel, bucketChannel](27)
+							[]
+							zwykly; 
+							Printer[print]("Cena biletu:" & "54"); 
+							TicketPriceSetter[print, cancel, bucketChannel](54)
+							[]
+							grupowy; 
+							Printer[print]("Cena biletu:" & "34"); 
+							TicketPriceSetter[print, cancel, bucketChannel](34)
+						end select
 				end case
 				[]
 				cancel
@@ -60,14 +112,20 @@ end channel
 	--	array [0..3] of int
 	--end type
 
-	process BuyTicketSetter[print : any, setCost : bucket](cost : int) is
-		hide printCostPar : any in
-			par printCostPar in
-				print ("Cena biletu: ")
-				||
-				print (cost)
-			end par
+	process 
+
+	TicketPriceSetter[print, cancel: any, bucketChannel : bucket] (cost : int) is
+		hide kup: any in
+			select
+				kup; bucketChannel(cost)
+				[]
+				cancel
+			end select
 		end hide
+	end process
+
+	process Printer[print: any] (message: string) is
+		print (message)
 	end process
 
 end module
