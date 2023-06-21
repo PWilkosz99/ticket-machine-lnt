@@ -4,12 +4,16 @@ type TicketTypes is
 	t20min, t1h, t24h, t1msc
 end type
 
+channel bucket is
+	(cost:int)
+end channel
+
 	process TicketMachine[cancel: any] is
-		hide t20min, t1h, KupBilet: any in
+		hide KupBilet: any in
 			loop
 				select
 					KupBilet;
-					BuyTicket[t20min, t1h, cancel]
+					BuyTicket[cancel]
 					[]
 					cancel
 				end select
@@ -17,39 +21,45 @@ end type
 		end hide
 	end process
 
-	process BuyTicket[t20min, t1h, cancel: any] is
-		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any in
+	process BuyTicket[cancel: any] is
+		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any, setCost : bucket in
 			select
 				tBilet20minutowy;
-				BuyTicketProcess[cancel](t20min)
+				BuyTicketProcess[setCost, cancel](t20min)
 				[]
 				tBiletGodzinny;
-				BuyTicketProcess[cancel](t1h)
+				BuyTicketProcess[setCost, cancel](t1h)
 				[]
 				tbiletDobowy;
-				BuyTicketProcess[cancel](t24h)
+				BuyTicketProcess[setCost, cancel](t24h)
 				[]
 				tBiletMiesieczny;
-				BuyTicketProcess[cancel](t1msc)
+				BuyTicketProcess[setCost, cancel](t1msc)
 				[]
 				cancel
 			end select
 		end hide
 	end process
 
-	process BuyTicketProcess[cancel: any](in ticketType: TicketTypes) is
+	process BuyTicketProcess[setCost : bucket, cancel: any](in ticketType: TicketTypes) is
 		hide cokolwiekdla20min, cokolwiekdla1h, cokolwiekdla24h, cokolwiekdla1msc : any in
 			select
 				case ticketType in
-					t20min ->  cokolwiekdla20min
-					| t1h -> cokolwiekdla1h
-					| t24h ->  cokolwiekdla24h
-					| t1msc -> cokolwiekdla1msc
+					t20min ->  cokolwiekdla20min; BuyTicketSetter[setCost](4)
+					| t1h -> cokolwiekdla1h; BuyTicketSetter[setCost](8)
+					| t24h ->  cokolwiekdla24h; BuyTicketSetter[setCost](20)
+					| t1msc -> cokolwiekdla1msc; BuyTicketSetter[setCost](120)
 				end case
 				[]
 				cancel
 			end select
 		end hide
+	end process
+
+	process BuyTicketSetter[setCost : bucket](cost : int) is
+		hide print, cost : any in
+			setCost(cost)
+			end hide
 	end process
 
 end module
