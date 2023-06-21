@@ -8,12 +8,12 @@ channel bucket is
 	(cost:int)
 end channel
 
-	process TicketMachine[cancel: any] is
+	process TicketMachine[print : any, cancel: any] is
 		hide KupBilet: any in
 			loop
 				select
 					KupBilet;
-					BuyTicket[cancel]
+					BuyTicket[print, cancel]
 					[]
 					cancel
 				end select
@@ -21,34 +21,34 @@ end channel
 		end hide
 	end process
 
-	process BuyTicket[cancel: any] is
+	process BuyTicket[print : any, cancel: any] is
 		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any, setCost : bucket in
 			select
 				tBilet20minutowy;
-				BuyTicketProcess[setCost, cancel](t20min)
+				BuyTicketProcess[print, setCost, cancel](t20min)
 				[]
 				tBiletGodzinny;
-				BuyTicketProcess[setCost, cancel](t1h)
+				BuyTicketProcess[print, setCost, cancel](t1h)
 				[]
 				tbiletDobowy;
-				BuyTicketProcess[setCost, cancel](t24h)
+				BuyTicketProcess[print, setCost, cancel](t24h)
 				[]
 				tBiletMiesieczny;
-				BuyTicketProcess[setCost, cancel](t1msc)
+				BuyTicketProcess[print, setCost, cancel](t1msc)
 				[]
 				cancel
 			end select
 		end hide
 	end process
 
-	process BuyTicketProcess[setCost : bucket, cancel: any](in ticketType: TicketTypes) is
+	process BuyTicketProcess[print : any, setCost : bucket, cancel: any](in ticketType: TicketTypes) is
 		hide cokolwiekdla20min, cokolwiekdla1h, cokolwiekdla24h, cokolwiekdla1msc : any in
 			select
 				case ticketType in
-					t20min ->  cokolwiekdla20min; BuyTicketSetter[setCost](4)
-					| t1h -> cokolwiekdla1h; BuyTicketSetter[setCost](8)
-					| t24h ->  cokolwiekdla24h; BuyTicketSetter[setCost](20)
-					| t1msc -> cokolwiekdla1msc; BuyTicketSetter[setCost](120)
+					t20min ->  cokolwiekdla20min; BuyTicketSetter[print, setCost](4)
+					| t1h -> cokolwiekdla1h; BuyTicketSetter[print, setCost](8)
+					| t24h ->  cokolwiekdla24h; BuyTicketSetter[print, setCost](20)
+					| t1msc -> cokolwiekdla1msc; BuyTicketSetter[print, setCost](120)
 				end case
 				[]
 				cancel
@@ -56,10 +56,18 @@ end channel
 		end hide
 	end process
 
-	process BuyTicketSetter[setCost : bucket](cost : int) is
-		hide print, cost : any in
-			setCost(cost)
-			end hide
+	--type arr is
+	--	array [0..3] of int
+	--end type
+
+	process BuyTicketSetter[print : any, setCost : bucket](cost : int) is
+		hide printCostPar : any in
+			par printCostPar in
+				print ("Cena biletu: ")
+				||
+				print (cost)
+			end par
+		end hide
 	end process
 
 end module
