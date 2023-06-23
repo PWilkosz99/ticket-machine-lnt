@@ -1,109 +1,153 @@
 module tickets is
 
-type TicketTypes is
-	t20min, t1h, t24h, t1msc
+-- enums
+type TicketTimes is
+	20min, 1h, 24h, 1msc
 end type
 
-channel bucket is
-	(cost:int)
-end channel
+type TicketTypes is
+	ulgowy, zwykly, grupowy
+end type
+
+type PaymentTypes is
+	gotowka, karta, blik
+end type
+
+-- records
+type Ticket is
+	Ticket1 (ticket_time: TicketTimes, ticket_type: TicketTypes, ticket_price: int),
+	nil
+	with get, set, ==
+end type
+
+type Payment is
+	Payment1 (payment_type: PaymentTypes, ticket: Ticket),
+	nil
+	with get, set, ==
+end type
+
+-- lists
+--type TicketList is
+--	list of Ticket
+--end type
+
+	process Printer[print: any] (message: string) is
+		print (message)
+	end process
 
 	process TicketMachine[print, cancel: any] is
-		hide KupBilet: any in
+		var ticketChosen: Ticket, paymentChosen: Payment in
 			loop
-				select
-					KupBilet;
-					BuyTicket[print, cancel]
-					[]
-					cancel
-				end select
+				TicketLoop[print, cancel] (?ticketChosen);
+				PaymentLoop[print, cancel] (ticketChosen, ?paymentChosen);
+				Printer[print] ("Zakonczono!")
+			end loop
+		end var
+	end process
+
+-- TICKETS
+
+	process TicketLoop[print, cancel: any] (out ticketChosen: Ticket) is
+		hide KupBilet: any in
+			ticketChosen := nil;
+			while ticketChosen == nil loop
+				KupBilet;
+				BuyTicket[print, cancel] (?ticketChosen);
+				if ticketChosen == nil then
+					Printer[print] ("Nie udalo sie wybrac biletu, powtorz czynnosc!")
+				else
+					Printer[print] ("Bilet wybrany:");
+					print(ticketChosen)
+				end if
 			end loop
 		end hide
 	end process
 
-	process BuyTicket[print, cancel: any] is
-		hide tBilet20minutowy, tBiletGodzinny, tbiletDobowy, tBiletMiesieczny: any, bucketChannel : bucket in
+	process BuyTicket[print, cancel: any] (out ticketChosen: Ticket) is
+		hide bilet_20_minutowy, bilet_1_godzinny, bilet_1_dobowy, bilet_1_miesieczny: any in
 			select
-				tBilet20minutowy;
-				BuyTicketProcess[print, cancel, bucketChannel](t20min)
+				bilet_20_minutowy;
+				BuyTicketProcess[print, cancel](20min, ?ticketChosen)
 				[]
-				tBiletGodzinny;
-				BuyTicketProcess[print, cancel, bucketChannel](t1h)
+				bilet_1_godzinny;
+				BuyTicketProcess[print, cancel](1h, ?ticketChosen)
 				[]
-				tbiletDobowy;
-				BuyTicketProcess[print, cancel, bucketChannel](t24h)
+				bilet_1_dobowy;
+				BuyTicketProcess[print, cancel](24h, ?ticketChosen)
 				[]
-				tBiletMiesieczny;
-				BuyTicketProcess[print, cancel, bucketChannel](t1msc)
+				bilet_1_miesieczny;
+				BuyTicketProcess[print, cancel](1msc, ?ticketChosen)
 				[]
-				cancel
+				cancel;
+				ticketChosen := nil
 			end select
 		end hide
 	end process
 
-	process BuyTicketProcess[print, cancel: any, bucketChannel : bucket] (in ticketType: TicketTypes) is
-		hide ulgowy, zwykly, grupowy : any in
+	process BuyTicketProcess[print, cancel: any] (ticket_time: TicketTimes, out ticketChosen: Ticket) is
+		hide biltet_ulgowy, bilet_zwykly, bilet_grupowy : any in
 			select
-				case ticketType in
-					t20min ->  
+				case ticket_time in
+					20min ->  
 						select 
-							ulgowy; 
+							biltet_ulgowy;
 							Printer[print]("Cena biletu:" & "2"); 
-							TicketPriceSetter[print, cancel, bucketChannel](2)
+							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 2, ?ticketChosen)
 							[]
-							zwykly; 
+							bilet_zwykly;
 							Printer[print]("Cena biletu:" & "4"); 
-							TicketPriceSetter[print, cancel, bucketChannel](4)
+							TicketPriceSetter[print, cancel](ticket_time,zwykly, 4, ?ticketChosen)
 							[]
-							grupowy; 
+							bilet_grupowy; 
 							Printer[print]("Cena biletu:" & "3"); 
-							TicketPriceSetter[print, cancel, bucketChannel](3)
+							TicketPriceSetter[print, cancel](ticket_time,grupowy, 3, ?ticketChosen)
 						end select
-					| t1h ->  
+					| 1h ->  
 						select 
-							ulgowy; 
+							biltet_ulgowy; 
 							Printer[print]("Cena biletu:" & "3"); 
-							TicketPriceSetter[print, cancel, bucketChannel](3)
+							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 3, ?ticketChosen)
 							[]
-							zwykly; 
+							bilet_zwykly; 
 							Printer[print]("Cena biletu:" & "6"); 
-							TicketPriceSetter[print, cancel, bucketChannel](6)
+							TicketPriceSetter[print, cancel](ticket_time,zwykly, 6, ?ticketChosen)
 							[]
-							grupowy; 
+							bilet_grupowy; 
 							Printer[print]("Cena biletu:" & "4"); 
-							TicketPriceSetter[print, cancel, bucketChannel](4)
+							TicketPriceSetter[print, cancel](ticket_time,grupowy, 4, ?ticketChosen)
 						end select
-					| t24h ->  
+					| 24h ->  
 						select 
-							ulgowy; 
+							biltet_ulgowy; 
 							Printer[print]("Cena biletu:" & "8"); 
-							TicketPriceSetter[print, cancel, bucketChannel](8)
+							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 8, ?ticketChosen)
 							[]
-							zwykly; 
+							bilet_zwykly; 
 							Printer[print]("Cena biletu:" & "16"); 
-							TicketPriceSetter[print, cancel, bucketChannel](16)
+							TicketPriceSetter[print, cancel](ticket_time,zwykly, 16, ?ticketChosen)
 							[]
-							grupowy; 
+							bilet_grupowy; 
 							Printer[print]("Cena biletu:" & "10"); 
-							TicketPriceSetter[print, cancel, bucketChannel](10)
+							TicketPriceSetter[print, cancel](ticket_time,grupowy, 10, ?ticketChosen)
 						end select
-					| t1msc ->  
+					| 1msc ->  
 						select 
-							ulgowy; 
+							biltet_ulgowy; 
 							Printer[print]("Cena biletu:" & "27"); 
-							TicketPriceSetter[print, cancel, bucketChannel](27)
+							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 27, ?ticketChosen)
 							[]
-							zwykly; 
+							bilet_zwykly; 
 							Printer[print]("Cena biletu:" & "54"); 
-							TicketPriceSetter[print, cancel, bucketChannel](54)
+							TicketPriceSetter[print, cancel](ticket_time,zwykly, 54, ?ticketChosen)
 							[]
-							grupowy; 
+							bilet_grupowy; 
 							Printer[print]("Cena biletu:" & "34"); 
-							TicketPriceSetter[print, cancel, bucketChannel](34)
+							TicketPriceSetter[print, cancel](ticket_time,grupowy, 34, ?ticketChosen)
 						end select
 				end case
 				[]
-				cancel
+				cancel;
+				ticketChosen := nil
 			end select
 		end hide
 	end process
@@ -112,20 +156,59 @@ end channel
 	--	array [0..3] of int
 	--end type
 
-	process 
-
-	TicketPriceSetter[print, cancel: any, bucketChannel : bucket] (cost : int) is
+	process TicketPriceSetter[print, cancel: any] (ticket_time: TicketTimes, ticket_type: TicketTypes, ticket_cost: int, out ticketChosen: Ticket) is
 		hide kup: any in
 			select
-				kup; bucketChannel(cost)
+				kup;
+				ticketChosen := Ticket1(ticket_time, ticket_type, ticket_cost)
 				[]
-				cancel
+				cancel;
+				ticketChosen := nil
 			end select
 		end hide
 	end process
 
-	process Printer[print: any] (message: string) is
-		print (message)
+-- PAYMENTS
+
+	process PaymentLoop[print, cancel: any] (ticketChosen: Ticket, out paymentChosen: Payment) is
+		Printer[print] ("Wybierz metode platnosci:");
+		paymentChosen := nil;
+		while paymentChosen == nil loop
+			SelectPayment[print, cancel] (ticketChosen, ?paymentChosen);
+			if paymentChosen == nil then
+				Printer[print] ("Tranzakcja nie udana, powtorz platnosc!")
+			else
+				Printer[print] ("Tranzakcja udana!");
+				print(paymentChosen)
+			end if
+		end loop
+	end process
+
+	process SelectPayment[print, cancel:any] (in ticketChosen: Ticket, out paymentChosen: Payment) is
+		hide zaplac_gotowka, zaplac_karta, zaplac_blikiem: any in
+			select
+				zaplac_gotowka; SelectPaymentProcess[print, cancel] (gotowka, ticketChosen, ?paymentChosen)
+				[]
+				zaplac_karta; SelectPaymentProcess[print, cancel] (karta, ticketChosen, ?paymentChosen)
+				[]
+				zaplac_blikiem; SelectPaymentProcess[print, cancel] (blik, ticketChosen, ?paymentChosen)
+				[]
+				cancel;
+				paymentChosen := nil
+			end select
+		end hide
+	end process
+
+	process SelectPaymentProcess[print, cancel:any] (payment_type: PaymentTypes, ticketChosen: Ticket, out paymentChosen: Payment) is
+		hide zaplac: any in
+			select
+				zaplac;
+				paymentChosen := Payment1(payment_type, ticketChosen)
+				[]
+				cancel;
+				paymentChosen := nil
+			end select
+		end hide
 	end process
 
 end module
