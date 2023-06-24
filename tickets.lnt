@@ -91,57 +91,57 @@ end type
 					20min ->  
 						select 
 							biltet_ulgowy;
-							Printer[print]("Cena biletu:" & "2"); 
+							Printer[print]("Cena biletu: " & "2 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 2, ?ticketChosen)
 							[]
 							bilet_zwykly;
-							Printer[print]("Cena biletu:" & "4"); 
+							Printer[print]("Cena biletu: " & "4 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,zwykly, 4, ?ticketChosen)
 							[]
 							bilet_grupowy; 
-							Printer[print]("Cena biletu:" & "3"); 
+							Printer[print]("Cena biletu: " & "3 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,grupowy, 3, ?ticketChosen)
 						end select
 					| 1h ->  
 						select 
 							biltet_ulgowy; 
-							Printer[print]("Cena biletu:" & "3"); 
+							Printer[print]("Cena biletu: " & "3 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 3, ?ticketChosen)
 							[]
 							bilet_zwykly; 
-							Printer[print]("Cena biletu:" & "6"); 
+							Printer[print]("Cena biletu: " & "6 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,zwykly, 6, ?ticketChosen)
 							[]
 							bilet_grupowy; 
-							Printer[print]("Cena biletu:" & "4"); 
+							Printer[print]("Cena biletu: " & "4 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,grupowy, 4, ?ticketChosen)
 						end select
 					| 24h ->  
 						select 
 							biltet_ulgowy; 
-							Printer[print]("Cena biletu:" & "8"); 
+							Printer[print]("Cena biletu: " & "8 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 8, ?ticketChosen)
 							[]
 							bilet_zwykly; 
-							Printer[print]("Cena biletu:" & "16"); 
+							Printer[print]("Cena biletu: " & "16 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,zwykly, 16, ?ticketChosen)
 							[]
 							bilet_grupowy; 
-							Printer[print]("Cena biletu:" & "10"); 
+							Printer[print]("Cena biletu: " & "10 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,grupowy, 10, ?ticketChosen)
 						end select
 					| 1msc ->  
 						select 
 							biltet_ulgowy; 
-							Printer[print]("Cena biletu:" & "27"); 
+							Printer[print]("Cena biletu: " & "27 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,ulgowy, 27, ?ticketChosen)
 							[]
 							bilet_zwykly; 
-							Printer[print]("Cena biletu:" & "54"); 
+							Printer[print]("Cena biletu: " & "54 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,zwykly, 54, ?ticketChosen)
 							[]
 							bilet_grupowy; 
-							Printer[print]("Cena biletu:" & "34"); 
+							Printer[print]("Cena biletu: " & "34 zl"); 
 							TicketPriceSetter[print, cancel](ticket_time,grupowy, 34, ?ticketChosen)
 						end select
 				end case
@@ -176,9 +176,9 @@ end type
 		while paymentChosen == nil loop
 			SelectPayment[print, cancel] (ticketChosen, ?paymentChosen);
 			if paymentChosen == nil then
-				Printer[print] ("Tranzakcja nie udana, powtorz platnosc!")
+				Printer[print] ("Transakcja nie udana, powtorz platnosc!")
 			else
-				Printer[print] ("Tranzakcja udana!");
+				Printer[print] ("Transakcja udana!");
 				print(paymentChosen)
 			end if
 		end loop
@@ -186,27 +186,102 @@ end type
 
 	process SelectPayment[print, cancel:any] (in ticketChosen: Ticket, out paymentChosen: Payment) is
 		hide zaplac_gotowka, zaplac_karta, zaplac_blikiem: any in
+			paymentChosen := nil;
+			var status : bool in
+				status := false;
+				while (status == false) loop PaymentLoop in
+					select
+						zaplac_gotowka; SelectPaymentProcess[print, cancel] (gotowka, ticketChosen, ?paymentChosen, ?status)
+						[]
+						zaplac_karta; SelectPaymentProcess[print, cancel] (karta, ticketChosen, ?paymentChosen, ?status)
+						[]
+						zaplac_blikiem; SelectPaymentProcess[print, cancel] (blik, ticketChosen, ?paymentChosen, ?status)
+						[]
+						cancel;
+						break PaymentLoop
+					end select
+				end loop
+			end var
+		end hide
+	end process
+
+	process SelectPaymentProcess[print, cancel:any] (payment_type: PaymentTypes, ticketChosen: Ticket, out paymentChosen: Payment, out status: bool) is
+		paymentChosen := nil;
+			case payment_type in 
+				gotowka -> PayByCash[print, cancel] (?status);
+					if status == true then
+						paymentChosen := Payment1(payment_type, ticketChosen)
+					end if
+				| karta -> PayByCreditcard[print, cancel] (?status); 
+					if status == true then
+						paymentChosen := Payment1(payment_type, ticketChosen)
+					end if
+				| blik -> PayByBLIK[print, cancel] (?status);
+					if status == true then
+						paymentChosen := Payment1(payment_type, ticketChosen)
+					end if
+			end case
+	end process
+
+
+	process PayByCreditcard[print, cancel:any] (out status: bool)  is
+		hide odczytaj_karte, wprowadz_pin, transakcja_bezobslugowa, transakcja_autoryzowana: any in
+			odczytaj_karte;
+			status := false;
 			select
-				zaplac_gotowka; SelectPaymentProcess[print, cancel] (gotowka, ticketChosen, ?paymentChosen)
+				transakcja_bezobslugowa;
+				ProcessCreditCardPayment[print, cancel] (?status)
 				[]
-				zaplac_karta; SelectPaymentProcess[print, cancel] (karta, ticketChosen, ?paymentChosen)
+				transakcja_autoryzowana;
+				wprowadz_pin;
+				ProcessCreditCardPayment[print, cancel] (?status)
 				[]
-				zaplac_blikiem; SelectPaymentProcess[print, cancel] (blik, ticketChosen, ?paymentChosen)
-				[]
-				cancel;
-				paymentChosen := nil
+				cancel
 			end select
 		end hide
 	end process
 
-	process SelectPaymentProcess[print, cancel:any] (payment_type: PaymentTypes, ticketChosen: Ticket, out paymentChosen: Payment) is
-		hide zaplac: any in
+	process PayByBLIK[print, cancel:any] (out status: bool)  is
+		status := false;
+		hide wprowadz_kod_BLIK: any in
 			select
-				zaplac;
-				paymentChosen := Payment1(payment_type, ticketChosen)
+				wprowadz_kod_BLIK;
+				ProcessCreditCardPayment[print, cancel] (?status)
 				[]
-				cancel;
-				paymentChosen := nil
+				cancel
+			end select
+		end hide
+	end process
+
+	process PayByCash[print, cancel:any] (out status: bool)  is
+		status :=false;
+		hide wrzuc_monety, wydaj_reszte, saldo_zbyt_niskie, saldo_wystarczajace : any in
+			loop cashLoop in
+				wrzuc_monety;
+				select
+					saldo_zbyt_niskie
+					[]
+					saldo_wystarczajace;
+					wydaj_reszte;
+					status := true;
+					break cashLoop
+					[]
+					cancel;
+					wydaj_reszte;
+					break cashLoop
+				end select
+			end loop
+		end hide
+	end process
+
+	process ProcessCreditCardPayment [print, cancel:any] (out status: bool) is
+		hide transakcja_zaakceptowana, transakcja_odrzucona : any in
+			select
+				transakcja_zaakceptowana;
+				status := true
+				[]
+				transakcja_odrzucona;
+				status := false
 			end select
 		end hide
 	end process
