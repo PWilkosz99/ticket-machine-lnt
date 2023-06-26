@@ -31,18 +31,29 @@ end type
 --	list of Ticket
 --end type
 
+channel TicketChannel is
+	(ticket_chosen: Ticket)
+end channel
+
 	process Printer[print: any] (message: string) is
 		print (message)
 	end process
 
-	process TicketMachine[print, cancel: any] is
-		var ticketChosen: Ticket, paymentChosen: Payment in
-			loop
-				TicketLoop[print, cancel] (?ticketChosen);
-				PaymentLoop[print, cancel] (ticketChosen, ?paymentChosen);
-				Printer[print] ("Zakonczono!")
-			end loop
-		end var
+	process TicketMachine[print, cancel: any, tChannel: TicketChannel] is
+		loop
+			par tChannel in
+				var ticketChosen: Ticket in
+					TicketLoop[print, cancel] (?ticketChosen);
+					tChannel(ticketChosen)
+				end var
+				||
+				var ticketChosen: Ticket, paymentChosen: Payment in
+					tChannel(?ticketChosen);
+					PaymentLoop[print, cancel] (ticketChosen, ?paymentChosen);
+					Printer[print] ("Zakonczono!")
+				end var
+			end par
+		end loop
 	end process
 
 -- TICKETS
@@ -170,7 +181,7 @@ end type
 
 -- PAYMENTS
 
-	process PaymentLoop[print, cancel: any] (ticketChosen: Ticket, out paymentChosen: Payment) is
+	process PaymentLoop[print, cancel: any] (in ticketChosen: Ticket, out paymentChosen: Payment) is
 		Printer[print] ("Wybierz metode platnosci:");
 		paymentChosen := nil;
 		while paymentChosen == nil loop
